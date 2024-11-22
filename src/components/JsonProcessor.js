@@ -21,7 +21,7 @@ function JsonProcessor() {
       }
 
       const headersList = { "Content-Type": "application/json" };
-      const response = await fetch("http://localhost:5000/bfhl", {
+      const response = await fetch("https://bajaj-backend-9n8e.onrender.com/bfhl", {
         method: "POST",
         body: JSON.stringify(parsedInput),
         headers: headersList,
