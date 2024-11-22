@@ -1,258 +1,146 @@
-import React, { useState, useEffect } from 'react';
-import './JsonProcessor.css';
+import { useState } from 'react';
+import './JsonProcessor.css';  // Assuming you have CSS for styling
 
-const JsonProcessor = () => {
-  const [inputJson, setInputJson] = useState('');
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState('');
-  const [selectedOptions, setSelectedOptions] = useState([]);
+function JsonProcessor() {
+  const [apiInput, setApiInput] = useState('{"data":["L","22","h","5","U","444","i","S","1"], "file_b64":""}');
+  const [selectedFilters, setSelectedFilters] = useState(['all']);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [responseData, setResponseData] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [fileDetails, setFileDetails] = useState(null);
-  const [activeTab, setActiveTab] = useState('json');
-
-  // Set document title
-  useEffect(() => {
-    document.title = "0101CS211097"; 
-  }, []);
-
-  const options = [
-    { value: 'alphabets', label: 'Alphabets' },
-    { value: 'numbers', label: 'Numbers' },
-    { value: 'highest_lowercase', label: 'Highest lowercase alphabet' }
-  ];
-
-  const validateAndParseJSON = (input) => {
-    try {
-      const parsed = JSON.parse(input);
-      if (!parsed.data || !Array.isArray(parsed.data)) {
-        throw new Error('Input must contain a "data" array');
-      }
-      return parsed;
-    } catch (e) {
-      throw new Error('Invalid JSON format');
-    }
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        setError('File size must be less than 10MB');
-        setSelectedFile(null);
-        event.target.value = null;
-        return;
-      }
-      setSelectedFile(file);
-      setError('');
-      
-      setFileDetails({
-        name: file.name,
-        size: (file.size / 1024).toFixed(2) + ' KB',
-        type: file.type || 'Unknown'
-      });
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
-      let validJson = inputJson ? validateAndParseJSON(inputJson) : { data: [] };
-      
-      const formData = new FormData();
-      if (selectedFile) {
-        formData.append('file', selectedFile);
+      // Parse and validate input
+      const parsedInput = JSON.parse(apiInput);
+      if (!parsedInput.data || !Array.isArray(parsedInput.data)) {
+        throw new Error("Invalid input: 'data' must be an array.");
       }
-      formData.append('data', JSON.stringify(validJson.data));
 
-      const response = await fetch('https://bajaj-backend-9n8e.onrender.com/bfhl', {
-        method: 'POST',
-        headers: {
-          'user_id': 'Pranjal gupta',
-          'email': 'abhayg980@gmail.com',
-          'roll_number': '0101CS211097',
-          'filename': selectedFile?.name || 'no_file'
-        },
-        body: formData
+      const headersList = { "Content-Type": "application/json" };
+      const response = await fetch("http://localhost:5000/bfhl", {
+        method: "POST",
+        body: JSON.stringify(parsedInput),
+        headers: headersList,
       });
 
       const data = await response.json();
-      if (data.is_success) {
-        setResponse(data);
-        setSelectedOptions(['alphabets', 'numbers']);
+      if (!response.ok) {
+        setErrorMessage(data.error || "An error occurred.");
+        setResponseData(null);
       } else {
-        throw new Error(data.error || 'Failed to process data');
+        setResponseData(data);
+        setErrorMessage('');
       }
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      setErrorMessage('Invalid JSON input. Please check your input format.');
+      setResponseData(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOptionChange = (e) => {
-    const value = e.target.value;
-    setSelectedOptions(
-      e.target.checked
-        ? [...selectedOptions, value]
-        : selectedOptions.filter(option => option !== value)
-    );
+  const filterOptions = [
+    { value: 'all', label: 'Show All' },
+    { value: 'alphabets', label: 'Alphabets' },
+    { value: 'numbers', label: 'Numbers' },
+    { value: 'highest-lowercase', label: 'Highest lowercase alphabet' },
+  ];
+
+  const handleFilterChange = (value) => {
+    setSelectedFilters((prev) => {
+      if (value === 'all') return ['all'];
+      const newFilters = prev.includes(value)
+        ? prev.filter((f) => f !== value)
+        : [...prev.filter((f) => f !== 'all'), value];
+      return newFilters.length ? newFilters : ['all'];
+    });
   };
 
-  const renderFileInfo = () => {
-    if (!response?.file_valid) return null;
-    
-    return (
-      <div className="file-info">
-        <h3>File Information:</h3>
-        <div className="info-content">
-          <p><span>Name:</span> {response.filename}</p>
-          <p><span>Size:</span> {response.file_size_kb} KB</p>
-          <p><span>Type:</span> {response.file_mime_type}</p>
-        </div>
-      </div>
-    );
-  };
+  const getFilteredResponse = () => {
+    if (!responseData) return null;
+    if (selectedFilters.includes('all')) return JSON.stringify(responseData, null, 2);
 
-  const renderFilteredResponse = () => {
-    if (!response) return null;
+    let result = {};
+    if (selectedFilters.includes('alphabets')) result.alphabets = responseData.alphabets;
+    if (selectedFilters.includes('numbers')) result.numbers = responseData.numbers;
+    if (selectedFilters.includes('highest-lowercase')) result.highest_lowercase_alphabet = responseData.highest_lowercase_alphabet;
 
-    return (
-      <div className="response-section">
-        {renderFileInfo()}
-        
-        {selectedOptions.includes('alphabets') && response.alphabets.length > 0 && (
-          <div className="result-box">
-            <h3>Alphabets:</h3>
-            <p>{response.alphabets.join(', ')}</p>
-          </div>
-        )}
-        
-        {selectedOptions.includes('numbers') && response.numbers.length > 0 && (
-          <div className="result-box">
-            <h3>Numbers:</h3>
-            <p>{response.numbers.join(', ')}</p>
-          </div>
-        )}
-        
-        {selectedOptions.includes('highest_lowercase') && response.highest_lowercase_alphabet.length > 0 && (
-          <div className="result-box">
-            <h3>Highest Lowercase Alphabet:</h3>
-            <p>{response.highest_lowercase_alphabet[0]}</p>
-          </div>
-        )}
-      </div>
-    );
+    return JSON.stringify(result, null, 2);
   };
 
   return (
-    <div className="processor-container">
-      <div className="processor-card">
-        <h2>Bajaj FullStack Round</h2>
-        
-        <div className="tabs">
-          <button 
-            className={`tab-button ${activeTab === 'json' ? 'active' : ''}`}
-            onClick={() => setActiveTab('json')}
+    <div className="container">
+      <div className="card">
+        <h1 className="heading">BFHL API Tester</h1>
+        <div className="input-section">
+          <label htmlFor="api-input" className="label">API Input</label>
+          <textarea
+            id="api-input"
+            value={apiInput}
+            onChange={(e) => setApiInput(e.target.value)}
+            className={`textarea ${errorMessage ? 'error' : ''}`}
+            rows={4}
+          />
+          {errorMessage && <p className="error-message">{errorMessage}</p>}
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="submit-button"
           >
-            JSON Input
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'file' ? 'active' : ''}`}
-            onClick={() => setActiveTab('file')}
-          >
-            File Upload
+            {isLoading ? 'Submitting...' : 'Submit'}
           </button>
         </div>
 
-        <div className="tab-content">
-          {activeTab === 'json' && (
-            <div className="input-section">
-              <label>Enter JSON Input:</label>
-              <textarea
-                value={inputJson}
-                onChange={(e) => setInputJson(e.target.value)}
-                placeholder='{"data": ["A", "1", "B", "2", "z"]}'
-              />
-            </div>
-          )}
-
-          {activeTab === 'file' && (
-            <div className="input-section">
-              <label>Upload File (Max 10MB):</label>
-              <div className="file-upload">
-                <input
-                  type="file"
-                  onChange={handleFileChange}
-                  accept=".txt,.js,.html,.css,.json"
-                  id="file-input"
-                />
-                <label htmlFor="file-input" className="file-label">
-                  Select a file
-                </label>
-              </div>
-              {fileDetails && (
-                <div className="file-details">
-                  <h3>Selected File:</h3>
-                  <div className="info-content">
-                    <p><span>Name:</span> {fileDetails.name}</p>
-                    <p><span>Size:</span> {fileDetails.size}</p>
-                    <p><span>Type:</span> {fileDetails.type}</p>
+        {responseData && (
+          <>
+            <div className="filter-section">
+              <div className="filter-dropdown" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+                <div className="filter-header">
+                  <span className="filter-label">Multi Filter</span>
+                  <div className="filter-tags">
+                    {selectedFilters.map((filter) => (
+                      <span key={filter} className="filter-tag">
+                        {filterOptions.find((option) => option.value === filter).label}
+                      </span>
+                    ))}
                   </div>
+                </div>
+                <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
+              </div>
+              {isDropdownOpen && (
+                <div className="filter-options">
+                  {filterOptions.map((option) => (
+                    <div
+                      key={option.value}
+                      className={`filter-option ${selectedFilters.includes(option.value) ? 'selected' : ''}`}
+                      onClick={() => handleFilterChange(option.value)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFilters.includes(option.value)}
+                        readOnly
+                        className="checkbox"
+                      />
+                      {option.label}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          )}
 
-          <form onSubmit={handleSubmit}>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`submit-button ${isLoading ? 'loading' : ''}`}
-            >
-              {isLoading ? 'Processing...' : 'Submit'}
-            </button>
-          </form>
-        </div>
-
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
-
-        {response && (
-          <div className="response-container">
-            <div className="success-message">
-              Data processed successfully!
+            <div className="response-section">
+              <h2 className="filtered-heading">Filtered Response</h2>
+              <pre className="filtered-response">{getFilteredResponse()}</pre>
             </div>
-
-            <div className="options-section">
-              <label>Select data to display:</label>
-              <div className="checkbox-group">
-                {options.map((option) => (
-                  <label key={option.value} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      value={option.value}
-                      checked={selectedOptions.includes(option.value)}
-                      onChange={handleOptionChange}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {renderFilteredResponse()}
-          </div>
+          </>
         )}
       </div>
     </div>
   );
-};
+}
 
 export default JsonProcessor;
