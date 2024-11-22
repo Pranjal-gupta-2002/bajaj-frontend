@@ -13,7 +13,7 @@ const JsonProcessor = () => {
 
   // Set document title
   useEffect(() => {
-    document.title = "0101CS211097"; // Replace with actual roll number
+    document.title = "0101CS211097"; 
   }, []);
 
   const options = [
@@ -151,7 +151,7 @@ const JsonProcessor = () => {
   return (
     <div className="processor-container">
       <div className="processor-card">
-        <h2>Data Processor</h2>
+        <h2>Bajaj FullStack Round</h2>
         
         <div className="tabs">
           <button 
