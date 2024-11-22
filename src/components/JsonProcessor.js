@@ -68,12 +68,12 @@ const JsonProcessor = () => {
       }
       formData.append('data', JSON.stringify(validJson.data));
 
-      const response = await fetch('http://localhost:3000/bfhl', {
+      const response = await fetch('https://bajaj-backend-9n8e.onrender.com/bfhl', {
         method: 'POST',
         headers: {
-          'user_id': 'test_user',
-          'email': 'test@example.com',
-          'roll_number': 'test_roll',
+          'user_id': 'Pranjal gupta',
+          'email': 'abhayg980@gmail.com',
+          'roll_number': '0101CS211097',
           'filename': selectedFile?.name || 'no_file'
         },
         body: formData
